@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: carAllocationRequest
+  labels:
+    app: carAllocationRequest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: carAllocationRequest
+  template:
+    metadata:
+      labels:
+        app: carAllocationRequest
+    spec:
+      containers:
+        - name: carAllocationRequest
+          image: 879772956301.dkr.ecr.ca-central-1.amazonaws.com/user16-carallocationrequest:v20210709
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: '/actuator/health'
+              port: 8080
+            initialDelaySeconds: 10
+            timeoutSeconds: 2
+            periodSeconds: 5
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: '/actuator/health'
+              port: 8080
+            initialDelaySeconds: 120
+            timeoutSeconds: 2
+            periodSeconds: 5
+            failureThreshold: 5

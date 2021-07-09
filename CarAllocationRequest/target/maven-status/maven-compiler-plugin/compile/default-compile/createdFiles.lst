@@ -1,0 +1,15 @@
+taxiservice\AllocationCanceled.class
+taxiservice\PolicyHandler.class
+taxiservice\DrivingFinished.class
+taxiservice\CarAllocationRequestApplication.class
+taxiservice\AbstractEvent.class
+taxiservice\DrivingStarted.class
+taxiservice\CarAllocationRequest.class
+taxiservice\external\Driving.class
+taxiservice\AllocationRequested.class
+taxiservice\CarAllocationRequestController.class
+taxiservice\AllocationRequestApproved.class
+taxiservice\CarAllocationRequestRepository.class
+taxiservice\AbstractEvent$1.class
+taxiservice\config\kafka\KafkaProcessor.class
+taxiservice\external\DrivingService.class
