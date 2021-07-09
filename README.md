@@ -819,7 +819,38 @@ kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/down
 kubectl get deployment metrics-server -n kube-system
 ```
 
-2. 리소스 설정 
+2. 모니터링할 서비스 cpu 리소스 리소스 설정
+
+- CarAllocationRequest > kubernetes > deployment.yml
+![HPA](https://user-images.githubusercontent.com/83382676/125023634-3f91f100-e0ba-11eb-80ad-bc535648cc33.png)
+
+3. yaml 파일을 사용하여 쿠버네티스에 배포
+```
+kubectl apply -f deployment.yml
+kubectl apply -f service.yaml
+```
+
+4. 배포 완료 후 kubectl get deploy carallocationrequest -o yaml 명령을 쳐서
+   image 와 resources의 값이 정상적으로 설정되어있는지 확인 
+![HPA 확인](https://user-images.githubusercontent.com/83382676/125025506-bd0b3080-e0bd-11eb-84d8-8f50494abf98.png)
+
+5. 명령어를 통한 HPA 설정 - 조금 더 타이트 하게
+```
+# CPU 사용량이 50% 초과 시 replica를 5개까지 늘림
+kubectl autoscale deployment carallocationrequest --cpu-percent=50 --min=1 --max=5
+```
+
+6. HPA 적용 상태에서 다시 siege로 부하 처리
+```
+kubectl exec -it siege -- /bin/bash
+siege -c200 -t20S -r10 -v --content-type "application/json" 'http://CarAllocationRequest:8080/carAllocationRequests POST {"userId":"USER1", "destAddr":"Misa", "allocStatus":"Requested"}'
+```
+![HPA 부하](https://user-images.githubusercontent.com/83382676/125027656-8d5e2780-e0c1-11eb-9ec3-2631942168bd.png)
+
+- 부하량에 따른 서비스 모니터링 - 증가 했다 서서히 줄어든다.
+  kubectl get deploy carallocationrequest -w
+  
+![서비스 증가](https://user-images.githubusercontent.com/83382676/125027938-183f2200-e0c2-11eb-8f7b-0613d87eee84.png)
 
 
 ## 무정지 재배포
