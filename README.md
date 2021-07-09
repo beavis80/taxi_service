@@ -855,4 +855,32 @@ siege -c200 -t20S -r10 -v --content-type "application/json" 'http://CarAllocatio
 
 ## 무정지 재배포
 
+### Zero-downtime deploy (Readiness Probe)
+
+1. Readiness 주석 처리
+
+![Readi 주석](https://user-images.githubusercontent.com/83382676/125029872-3c503280-e0c5-11eb-8f92-0dfbd5d5450d.png)
+
+2. Readiness 미적용 상태 확인 
+```
+kubectl apply -f deployment.yml
+
+kubectl get deploy carallocationrequest -o yaml
+```
+![readi 미적용](https://user-images.githubusercontent.com/83382676/125030237-c6989680-e0c5-11eb-9b18-0908e111db91.png)
+
+3. siege 부하를 줌 과 동시에 신규 버전으로 update 진행시 서비스 중단 확인
+```
+CMD 창1 > siege 부하
+siege -c1 -t100S -v --content-type "application/json" 'http://CarAllocationRequest:8080/carAllocationRequests POST {"userId":"USER1", "destAddr":"Misa", "allocStatus":"Requested"}'
+```
+![readi 에러](https://user-images.githubusercontent.com/83382676/125031878-24c67900-e0c8-11eb-8d03-f88bc725b6b3.png)
+
+
+```
+CMD 창2 > 서비스 이미지 버전 업데이트
+kubectl set image deploy carallocationrequest carallocationrequest=231047593658.dkr.ecr.ap-northeast-2.amazonaws.com/taxt-carallocationrequest:v20210709v
+```
+![이미지 버전 업](https://user-images.githubusercontent.com/83382676/125031899-2a23c380-e0c8-11eb-8327-f0eb9e74acef.png)
+
 
