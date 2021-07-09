@@ -1,0 +1,14 @@
+taxiservice\DrivingInfo.class
+taxiservice\AllocationCanceled.class
+taxiservice\PolicyHandler.class
+taxiservice\DrivingFinished.class
+taxiservice\DashboardApplication.class
+taxiservice\AbstractEvent.class
+taxiservice\DrivingStarted.class
+taxiservice\DrivingInfoRepository.class
+taxiservice\AllocationRequested.class
+taxiservice\PayApproved.class
+taxiservice\AllocationRequestApproved.class
+taxiservice\DrivingInfoViewHandler.class
+taxiservice\AbstractEvent$1.class
+taxiservice\config\kafka\KafkaProcessor.class
