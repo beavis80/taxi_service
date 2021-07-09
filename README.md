@@ -901,5 +901,51 @@ kubectl set image deploy carallocationrequest carallocationrequest=231047593658.
 
 
 
+## 데이터베이스 설정
+1. 외부의 데이터베이스에 접근 가능하도록 설정 변경
+```
+# CarAllocationRequest > application.yml
+
+spring:
+  jpa:
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+      ddl-auto: update
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL57Dialect
+  datasource:
+    url: jdbc:mysql://${_DATASOURCE_ADDRESS:35.221.110.118:3306}/${_DATASOURCE_TABLESPACE:my-database}
+    username: ${_DATASOURCE_USERNAME:root1}
+    password: ${_DATASOURCE_PASSWORD:secretpassword}
+    driverClassName: com.mysql.cj.jdbc.Driver
+```
+
+2. 변경한 정보를 환경변수에서 얻어오도록 설정하였고, Deployment.yml 에서 위의 값이 전달되도록 주입
+```
+    spec:
+      containers:
+        - name: carallocationrequest
+          image: 231047593658.dkr.ecr.ap-northeast-2.amazonaws.com/taxt-carallocationrequest:v20210709
+          ports:
+            - containerPort: 8080
+          env:
+            - name: superuser.userId
+              value: some_value
+            - name: _DATASOURCE_ADDRESS
+              value: mysql
+            - name: _DATASOURCE_TABLESPACE
+              value: orderdb
+            - name: _DATASOURCE_USERNAME
+              value: root
+            - name: _DATASOURCE_PASSWORD
+              value: admin
+
+```
+
+3. secret 객체 생성 ( Config Map )
 
 
