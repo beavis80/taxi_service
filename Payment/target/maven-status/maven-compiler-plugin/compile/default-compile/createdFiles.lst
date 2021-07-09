@@ -1,0 +1,9 @@
+taxiservice\AbstractEvent.class
+taxiservice\PaymentApplication.class
+taxiservice\Payment.class
+taxiservice\PaymentController.class
+taxiservice\PayApproved.class
+taxiservice\PolicyHandler.class
+taxiservice\PaymentRepository.class
+taxiservice\AbstractEvent$1.class
+taxiservice\config\kafka\KafkaProcessor.class
