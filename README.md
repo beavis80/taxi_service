@@ -884,3 +884,10 @@ kubectl set image deploy carallocationrequest carallocationrequest=231047593658.
 ![이미지 버전 업](https://user-images.githubusercontent.com/83382676/125031899-2a23c380-e0c8-11eb-8327-f0eb9e74acef.png)
 
 
+4. deployment.yml Readiness 주석 해제 후 동일 테스트 수행
+- 배포 중에도 일부 부하로 인한 오류 외에 Connection Error 등은 발생 하지 않음
+![readi 적용 노에러](https://user-images.githubusercontent.com/83382676/125032620-34928d00-e0c9-11eb-9379-a50577639470.png)
+
+
+
+
