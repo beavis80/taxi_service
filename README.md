@@ -569,7 +569,155 @@ spring:
 # 운영
 
 ## CI/CD 설정
+- 각 서비스 별로 buildspec.yml 파일을 생성, AWS Codebuild를 사용하여 CI/CD 구현
+1) buildspec.yml 파일을 생성
+```
+# CarAllocationRequest > buildspec.yml
 
+version: 0.2
+
+env:
+  variables:
+    _PROJECT_NAME: "user16-carallocationrequest" 
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto8 
+      docker: 18
+    commands:
+      - echo install kubectl
+      - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+      - chmod +x ./kubectl
+      - mv ./kubectl /usr/local/bin/kubectl
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - echo $_PROJECT_NAME
+      - echo $AWS_ACCOUNT_ID
+      - echo $AWS_DEFAULT_REGION
+      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - echo start command
+      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - cd CarAllocationRequest 
+      - mvn package -Dmaven.test.skip=true
+      - docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION  .
+  post_build:
+    commands:
+      - echo Pushing the Docker image...
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION
+      - echo connect kubectl
+      - kubectl config set-cluster k8s --server="$KUBE_URL" --insecure-skip-tls-verify=true
+      - kubectl config set-credentials admin --token="$KUBE_TOKEN"
+      - kubectl config set-context default --cluster=k8s --user=admin
+      - kubectl config use-context default
+      - |
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: $_PROJECT_NAME
+            labels:
+              app: $_PROJECT_NAME
+          spec:
+            ports:
+              - port: 8080
+                targetPort: 8080
+            selector:
+              app: $_PROJECT_NAME
+          EOF
+      - |
+          cat  <<EOF | kubectl apply -f -
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: $_PROJECT_NAME
+            labels:
+              app: $_PROJECT_NAME
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: $_PROJECT_NAME
+            template:
+              metadata:
+                labels:
+                  app: $_PROJECT_NAME
+              spec:
+                containers:
+                  - name: $_PROJECT_NAME
+                    image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION
+                    ports:
+                      - containerPort: 8080
+                    readinessProbe:
+                      httpGet:
+                        path: /actuator/health
+                        port: 8080
+                      initialDelaySeconds: 10
+                      timeoutSeconds: 2
+                      periodSeconds: 5
+                      failureThreshold: 10
+                    livenessProbe:
+                      httpGet:
+                        path: /actuator/health
+                        port: 8080
+                      initialDelaySeconds: 120
+                      timeoutSeconds: 2
+                      periodSeconds: 5
+                      failureThreshold: 5
+          EOF
+cache:
+  paths:
+    - '/root/.m2/**/*'
+```
+
+2) 환경변수 설정
+
+![AWS 환경변수](https://user-images.githubusercontent.com/83382676/125020071-1faaff00-e0b3-11eb-8460-d0bf4f59e1c3.png)
+
+   - AWS_ACCOUNT_ID : 사용자 정보 참조
+
+   - KUBE_URL : ECR 이미지 세부정보 참조
+
+![KUBE_URL](https://user-images.githubusercontent.com/83382676/125020333-a19b2800-e0b3-11eb-9d1e-6a9f1a7ddc12.png)
+
+
+   - KUBE_TOKEN
+```
+#Service Account 생성
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eks-admin
+  namespace: kube-system
+EOF
+
+#Cluster Role 생성
+cat <<EOF | kubectl apply -f -
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: eks-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: eks-admin
+  namespace: kube-system
+EOF
+
+#TOKEN 가져오기
+kubectl -n kube-system describe secret eks-admin
+```
+
+3) Codebuild 적용 후 Git 에서 소스코드 변경 감지시 자동으로 Docker 빌드 및 서비스 기동 확인
 
 ## 동기식 호출 / 서킷 브레이킹 / 장애격리
 
