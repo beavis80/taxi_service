@@ -720,9 +720,106 @@ kubectl -n kube-system describe secret eks-admin
 3) Codebuild 적용 후 Git 에서 소스코드 변경 감지시 자동으로 Docker 빌드 및 서비스 기동 확인
 
 ## 동기식 호출 / 서킷 브레이킹 / 장애격리
+- 프로그램 설치 ( Helm, Kafka, Siege )
+```
+# Helm
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 > get_helm.sh
+chmod 700 get_helm.sh
+kubectl --namespace kube-system create sa tiller
+kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+
+# Kafka
+helm repo update
+helm repo add bitnami https://charts.bitnami.com/bitnami
+kubectl create ns kafka
+helm install my-kafka bitnami/kafka --namespace kafka
+
+# Siege
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: siege
+spec:
+  containers:
+  - name: siege
+    image: apexacme/siege-nginx
+EOF
+```
+
+- 원활한 테스트 진행을 위해 기존 설계에서 Pub/Sub 방식이었던 
+  AllocationRequested (CarAllocationRequest) > RequestAlloc (Driving) 간의 연결을 Req/Res 방식으로 수정
+```
+# CarAllocationRequest.java
+
+    @PostPersist
+    public void onPostPersist(){
+
+        System.out.println("######################### 부하 테스트 - allocRequest start" );
+        CarAllocationRequestApplication.applicationContext.getBean(taxiservice.external.DrivingService.class)
+                        .allocRequest(this.getCarReqId(), this.getDestAddr(), this.getAllocStatus(), this.getUserId());
 
 
-## 오토스케일 아웃
+        System.out.println("######################### 부하 테스트 - allocRequest end " );
+        
+# DrivingController.java
+
+ @RestController
+ public class DrivingController {
+
+    @Autowired
+    DrivingRepository drivingRepository;
+    
+    @RequestMapping(value = "/allocRequest",
+            method = RequestMethod.GET,
+            produces = "application/json;charset=UTF-8")
+    public void allocRequest(HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+
+                System.out.println("#################### /allocRequest called ");
+```
+
+- Spring Spring FeignClient + Hystrix 옵션을 사용하여 테스트 진행
+- 다량의 차량배정 요청으로 운행관리 서비스(Driving) 문제되는 경우 서킷브레이커로 장애격리
+```
+# CarAllocationRequest > Application.yml
+
+feign:
+  hystrix:
+    enabled: true
+
+hystrix:
+  command:
+    default:
+      execution.isolation.thread.timeoutInMilliseconds: 610
+```
+
+1. siege 로 부하 발생
+```
+# kubectl get all로 서비스 정상기동 확인 (CarAllocationRequest , Driving)
+  kubectl get all
+
+# siege 접속
+  kubectl exec -it siege -- /bin/bash
+
+# 200명, 20초동안 부하 적용
+   siege -c200 -t20S -r10 -v --content-type "application/json" 'http://CarAllocationRequest:8080/carAllocationRequests POST {"userId":"USER1", "destAddr":"Misa", "allocStatus":"Requested"}'
+```
+
+![서킷브레이커](https://user-images.githubusercontent.com/83382676/125022727-49b2f000-e0b8-11eb-9cd9-6e05923da843.png)
+![서킷브레이커2](https://user-images.githubusercontent.com/83382676/125022848-8c74c800-e0b8-11eb-8fa0-c8ace754716c.png)
+
+- 부하 발생시 일부 실패하는 Case가 있으나, 서킷브레이커에 의해 시스템 자원을 보호하며 서비스 자체가 중단되지 않도록 한다. 
+
+## 오토스케일 아웃 (HPA)
+1. metrics 설치
+```
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.7/components.yaml
+
+kubectl get deployment metrics-server -n kube-system
+```
+
+2. 리소스 설정 
 
 
 ## 무정지 재배포
