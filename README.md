@@ -889,5 +889,17 @@ kubectl set image deploy carallocationrequest carallocationrequest=231047593658.
 ![readi 적용 노에러](https://user-images.githubusercontent.com/83382676/125032620-34928d00-e0c9-11eb-9379-a50577639470.png)
 
 
+### Self-healing (Liveness Probe)
+
+1. Liveness Probe 의 Port 설정을 임의 Port로 변경하여, 정상적인 체크를 못하도록 강제
+![liveness 포트](https://user-images.githubusercontent.com/83382676/125033620-82f45b80-e0ca-11eb-8179-51b03141e37d.png)
+
+2. 해당 서비스에 부하를 주었을 때, 서비스가 에러로 종료 되고 Restart 되는 내용 확인
+![서비스 오류](https://user-images.githubusercontent.com/83382676/125034669-cf8c6680-e0cb-11eb-95fb-3cabe4543c03.png)
+
+![리스타트](https://user-images.githubusercontent.com/83382676/125034810-04002280-e0cc-11eb-824e-0ecfa1787e47.png)
+
+
+
 
 
